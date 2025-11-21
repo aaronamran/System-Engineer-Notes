@@ -98,7 +98,55 @@
   ```
   grep -E 'username1|username2' /etc/passwd
   ```
-- 
+- To properly modify sudoers file, use visudo
+  ```
+  sudo visudo
+  ```
+  To revoke a user which has sudo privileges (`username ALL=(ALL:ALL) ALL`), delete this entire line from the sudoers file
+  To allow a user to run a command (example `/usr/bin/ss`) as root, add the following to the end of file: `username ALL=(root) NOPASSWD: /usr/bin/ss`
+- Exposed Database ports can be exploited by attackers. To bind the ports to localhost, do the following.
+  Locate and edit the MySQL configuration file using
+  ```
+  find / -name "my.cnf" 2>/dev/null  (sometimes in /etc/mysql/conf.d/)
+  sudo nano /etc/mysql/my.cnf
+  ```
+  Locate the [mysqld] section and find the bind-address directive and set the bind-address to loopback address (127.0.0.1) using
+  ```
+  sudo grep -R "\[mysqld\]" /etc/mysql/
+  OUTPUT: /etc/mysql/mysql.conf.d/mysqld.cnf:[mysqld]
+  sudo nano /etc/mysql/mysql.conf.d/mysqld.cnf
+  ```
+  Then edit the following
+  ```
+  # Instead of skip-networking the default is now to listen only on
+  # localhost which is more compatible and is not less secure.
+  bind-address            = 0.0.0.0  (change to 127.0.0.1)
+  mysqlx-bind-address     = 127.0.0.1
+  ```
+  Then restart the MySQL service
+  ```
+  sudo systemctl restart mysql
+  ```
+  For Redis Database, edit the configuration file
+  ```
+  sudo nano /etc/redis/redis.conf
+  ```
+  Edit the following line
+  ```
+  # IF YOU ARE SURE YOU WANT YOUR INSTANCE TO LISTEN TO ALL THE INTERFACES
+  # JUST COMMENT THE FOLLOWING LINE.
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  bind 0.0.0.0  (change to 127.0.0.1)
+  ```
+  Then restart the Redis service
+  ```
+  sudo systemctl restart redis-server
+  ```
+
+
+
+  
+  
 
   
 
