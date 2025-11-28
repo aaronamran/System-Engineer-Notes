@@ -8,4 +8,5 @@ Personal repository to store important sysadmin knowledge
 
 <br />
 
-For collection of case-specific useful scripts, do check [here](https://github.com/aaronamran/System-Engineer-Notes/tree/main/scripts)
+For collection of case-specific useful scripts, do check [here](https://github.com/aaronamran/System-Engineer-Notes/tree/main/scripts).
+If you have feedback, suggestions, or questions, you can contact me at aaronamranba@gmail.com
