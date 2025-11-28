@@ -1,6 +1,8 @@
 # =========================================
 # Sun Storage Auto-Discovery Tool (Ethernet Only)
 # With MAC Vendor Highlighting for Sun Storage
+# Used for discovering unknown IP address of Sun Storage server by checking for Sun MAC address prefix
+# IMPORTANT! Laptop needs to be directly connected to Sun controller using Ethernet cable (peer-to-peer (P2P) connection)
 # =========================================
 
 $LogFile = "SunDiscovery.log"
