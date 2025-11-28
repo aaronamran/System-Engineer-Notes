@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# This script is used for checking if the listed servers sent logs to the syslog server
+
 servers=(
 172.24.66.25
 172.24.66.27
