@@ -6,4 +6,5 @@ Personal repository to store important sysadmin knowledge
 - [Storage and Filesystems]()
 - [PowerShell Commands](https://github.com/aaronamran/System-Engineer-Notes/blob/main/powershell-commands.md)
 
-
+<br />
+For collection of case-specific useful scripts, do check [here](https://github.com/aaronamran/System-Engineer-Notes/tree/main/scripts)
