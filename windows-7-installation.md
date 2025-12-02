@@ -5,6 +5,8 @@
 
 
 <details>
-  <section>Adding Windows 7 ISO in VirtualBox</section>
+  <section><h2>Adding Windows 7 ISO in VirtualBox</h2></section>
+
+  1. 
   
 </details>
