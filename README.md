@@ -8,6 +8,12 @@ Personal repository to store important sysadmin knowledge
 
 <br />
 
+Here are miscellaneous topics I dealt with in my job
+- [Installing Windows 7 Professional as VM in VirtualBox]()
+
+
+<br />
+
 For collection of case-specific useful scripts, do check [here](https://github.com/aaronamran/System-Engineer-Notes/tree/main/scripts).
 <br />
 If you have feedback, suggestions, or questions, you can contact me at aaronamranba@gmail.com
