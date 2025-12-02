@@ -43,11 +43,17 @@
      https://catalog.update.microsoft.com
      ```
 
-  5. In Microsoft Update Catalog search bar, the first update we will download is **KB976932**. A pop-up window will appear. Choose the exe and click on it to download. This update can be skipped if your Windows 7 is already running as Service Pack 1. 
+  5. In Microsoft Update Catalog (MUC) search bar, the first update we will download is **KB976932** which is an update for Windows 7 Service Pack 1. A pop-up window will appear. Choose the exe and click on it to download. This update can be skipped if your Windows 7 is already running as Service Pack 1. 
      <img width="814" height="619" alt="image" src="https://github.com/user-attachments/assets/6c314087-317f-493a-8e33-e265ea5fb95b" />
 
-  6. The next update we will install is **KB4490628**. Again, search for the correct type
-  7. 
+  6. The next update we will install is **KB4490628**, which is a Servicing Stack Update. Again, search for the correct type and install it. Make sure to restart Windows 7 after installing each update
+  7. Then we will return to MUC and search for **KB4474419**, which is a Security Update. This update is required for SHA2 signin, which is required to get more updates. Download and install the correct type. Restart Windows 7 once this step is completed
+  8. Return to MUC on Supermium and search for and download **KB4536952**. This is also another Servicing Stack Update. After installing it, restart Windows 7
+  9. The last manual update we will download from MUC is **KB4534310**. This is a Microsoft's Security Monthly Quality Rollup. Repeat the usual installation and restart steps. After Windows 7 restarts, the following screen will appear. Just click on "Don't remind me again"
+     <img width="750" height="566" alt="image" src="https://github.com/user-attachments/assets/9dd73b01-dcac-42b0-b345-4ae451534710" />
+
+  10. Now navigate to Windows Update in Control Panel. Then click on "Turn on Automatic Updates", and ensure it is checking for updates. This step will take a while for download and installation
+  11. 
 
 
 
