@@ -9,7 +9,7 @@ Personal repository to store important sysadmin knowledge
 <br />
 
 Here are miscellaneous topics I dealt with in my job
-- [Installing Windows 7 Professional as VM in VirtualBox]()
+- [Installing Windows 7 Professional as VM in VirtualBox](https://github.com/aaronamran/System-Engineer-Notes/blob/main/windows-7-installation.md)
 
 
 <br />
