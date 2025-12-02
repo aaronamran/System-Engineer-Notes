@@ -25,9 +25,33 @@
 <details>
   <summary><h2>Installing Windows Updates</h2></summary>
 
-  1. Once Windows 7 initial setup is done and stable, we navigate to Control Panel and attempt to install Windows Updates. You will notice that there is an error 80072EFE
+  1. Once Windows 7 initial setup is done and stable, we navigate to Control Panel and attempt to install Windows Updates. You will notice that there is an error code 80072EFE
      <img width="1099" height="623" alt="image" src="https://github.com/user-attachments/assets/e41aedad-2859-4a9d-9907-bcf3af429c0e" />
 
-  2. 
+  2. Using the preinstalled Internet Explorer (IE) browser to directly download patch updates is not an option due to End of Life. IE will not connect to any websites as it is no longer supported
+     <img width="808" height="381" alt="image" src="https://github.com/user-attachments/assets/08ad6ac4-766c-4107-82d1-8bd933c050b5" />
+
+  3. To bypass this, enter the following URL in the IE search bar
+     ```
+     win32subsystem.live
+     ```
+     Then scroll down to Supermium browser and click on it
+     <img width="815" height="575" alt="image" src="https://github.com/user-attachments/assets/fe366d39-eddb-4d29-8286-0e2088c217ff" />
+     You will be redirected to Supermium official project's homepage. Download the correct type based on your system (64-bit or 32-bit). Once the download is complete, run the installation. It is recommended to enable Supermium for all users
+  4. Open Supermium and enter the URL in the search bar
+     ```
+     https://catalog.update.microsoft.com
+     ```
+
+  5. In Microsoft Update Catalog search bar, the first update we will download is **KB976932**. A pop-up window will appear. Choose the exe and click on it to download. This update can be skipped if your Windows 7 is already running as Service Pack 1. 
+     <img width="814" height="619" alt="image" src="https://github.com/user-attachments/assets/6c314087-317f-493a-8e33-e265ea5fb95b" />
+
+  6. The next update we will install is **KB4490628**. Again, search for the correct type
+  7. 
+
+
+
+
+
   
 </details>
