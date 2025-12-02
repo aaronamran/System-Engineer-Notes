@@ -43,7 +43,7 @@
      https://catalog.update.microsoft.com
      ```
 
-  5. In Microsoft Update Catalog (MUC) search bar, the first update we will download is **KB976932** which is an update for Windows 7 Service Pack 1. A pop-up window will appear. Choose the exe and click on it to download. This update can be skipped if your Windows 7 is already running as Service Pack 1. 
+  5. In the Microsoft Update Catalog (MUC) search bar, the first update we will download is **KB976932** which is an update for Windows 7 Service Pack 1. A pop-up window will appear. Choose the exe and click on it to download. This update can be skipped if your Windows 7 is already running as Service Pack 1. 
      <img width="814" height="619" alt="image" src="https://github.com/user-attachments/assets/6c314087-317f-493a-8e33-e265ea5fb95b" />
 
   6. The next update we will install is **KB4490628**, which is a Servicing Stack Update. Again, search for the correct type and install it. Make sure to restart Windows 7 after installing each update
