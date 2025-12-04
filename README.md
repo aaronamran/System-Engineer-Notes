@@ -3,7 +3,7 @@ Personal repository to store important sysadmin knowledge
 
 ## Linux
 - [Common Linux Commands](https://github.com/aaronamran/System-Engineer-Notes/blob/main/common-linux-commands.md)
-- [RHCSA notes](https://github.com/aaronamran/System-Engineer-Notes/blob/main/rhcsa-notes.md)
+- [RHCSA Notes](https://github.com/aaronamran/System-Engineer-Notes/blob/main/rhcsa-notes.md)
 - [Securing Linux](https://github.com/aaronamran/System-Engineer-Notes/blob/main/securing-linux.md)
 - [Storage and Filesystems](https://github.com/aaronamran/System-Engineer-Notes/blob/main/storage-and-filesystems.md)
 
