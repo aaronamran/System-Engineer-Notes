@@ -5,6 +5,7 @@ Personal repository to store important sysadmin knowledge
 - [Securing Linux](https://github.com/aaronamran/System-Engineer-Notes/blob/main/securing-linux.md)
 - [Storage and Filesystems](https://github.com/aaronamran/System-Engineer-Notes/blob/main/storage-and-filesystems.md)
 - [PowerShell Commands](https://github.com/aaronamran/System-Engineer-Notes/blob/main/powershell-commands.md)
+- [Windows Command Prompt](https://github.com/aaronamran/System-Engineer-Notes/blob/main/windows-cmd.md)
 
 <br />
 
