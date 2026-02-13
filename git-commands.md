@@ -4,7 +4,7 @@
   ```
   git subtree add --prefix=reponame https://github.com/aaronamran/RepoName.git main --squash
   ```
-  pull current updates of a repo and reflect it on personal GitHub website, use
+  Before pulling current updates of a repo and reflect it on personal GitHub website, commit any existing changes first, then use
   ```
   git subtree pull --prefix=reponame https://github.com/aaronamran/RepoName.git main --squash
   ```
