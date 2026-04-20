@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # =============================================================================
-# pqcekss.sh — CBOM-scanning Automation Script
+# pqccheck.sh — CBOM-scanning Automation Script
 #
 # SELF-BOOTSTRAPPING: copy this file anywhere, chmod +x, and run it.
 # It will clone the CBOM-scanning repo if needed, create a virtual environment,
 # install all dependencies, then run every scan script automatically.
 #
 # Usage:
-#   chmod +x pqcekss.sh && ./pqcekss.sh
+#   chmod +x pqccheck.sh && ./pqccheck.sh
 # =============================================================================
 
 # Note: pipefail is intentionally NOT set — individual script failures are
@@ -88,7 +88,7 @@ separator() { echo "----------------------------------------------"; }
 show_banner() {
     echo ""
     echo "================================================"
-    echo "  eKSS Post-Quantum Cryptography"
+    echo "   Post-Quantum Cryptography Check"
     echo "  CBOM-scanning Automation Script"
     echo "================================================"
     echo ""
@@ -158,11 +158,11 @@ ensure_repo() {
                 ;;
         esac
         if has_cmd apt-get; then
-            ${SUDO_CMD} apt-get install -y git >>/tmp/pqcekss_bootstrap.log 2>&1
+            ${SUDO_CMD} apt-get install -y git >>/tmp/pqccheck_bootstrap.log 2>&1
         elif has_cmd dnf; then
-            ${SUDO_CMD} dnf install -y git >>/tmp/pqcekss_bootstrap.log 2>&1
+            ${SUDO_CMD} dnf install -y git >>/tmp/pqccheck_bootstrap.log 2>&1
         elif has_cmd yum; then
-            ${SUDO_CMD} yum install -y git >>/tmp/pqcekss_bootstrap.log 2>&1
+            ${SUDO_CMD} yum install -y git >>/tmp/pqccheck_bootstrap.log 2>&1
         fi
         if ! has_cmd git; then
             print_error "git could not be installed. Please install it manually and re-run."
@@ -192,7 +192,7 @@ ensure_repo() {
     fi
 
     # Copy this script into the repo so future runs are self-contained
-    local dest_script="${clone_dest}/pqcekss.sh"
+    local dest_script="${clone_dest}/pqccheck.sh"
     cp -f "${BASH_SOURCE[0]}" "$dest_script" 2>/dev/null || \
         cp -f "$0" "$dest_script" 2>/dev/null || true
     chmod +x "$dest_script" 2>/dev/null || true
@@ -201,7 +201,7 @@ ensure_repo() {
     print_info "Re-launching from: ${clone_dest}"
     echo ""
 
-    export PQCEKSS_REEXEC=1
+    export PQCCHECK_REEXEC=1
     exec bash "$dest_script" "$@"
 }
 
@@ -212,7 +212,7 @@ check_for_updates() {
     print_header "Checking for repository updates"
 
     # Skip update check if we just cloned the repo in this session
-    if [[ "${PQCEKSS_REEXEC:-0}" == "1" ]]; then
+    if [[ "${PQCCHECK_REEXEC:-0}" == "1" ]]; then
         print_ok "Repository was just cloned — already up to date."
         log "Update check skipped (just cloned)"
         return
@@ -879,7 +879,7 @@ print_summary() {
     echo ""
     print_info "Full log: ${LOG_FILE}"
     echo ""
-    log "=== pqcekss.sh finished — PASS=${pass_count} FAIL=${fail_count} ==="
+    log "=== pqccheck.sh finished — PASS=${pass_count} FAIL=${fail_count} ==="
 }
 
 # =============================================================================
@@ -911,7 +911,7 @@ main() {
     # RESULT_DIR is set (and created) only inside setup_script9(), if the user
     # actually chooses to run Script 9 with valid targets.
     VENV_DIR="${REPO_DIR}/.venv"
-    LOG_FILE="${REPO_DIR}/pqcekss_${TIMESTAMP}.log"
+    LOG_FILE="${REPO_DIR}/pqccheck_${TIMESTAMP}.log"
     SCAN_DIR="${REPO_DIR}/scan_${TIMESTAMP}"
     mkdir -p "${SCAN_DIR}"
 
@@ -920,7 +920,7 @@ main() {
     echo -e "  Log   : ${LOG_FILE}"
     echo -e "  Time  : $(date)"
     echo ""
-    log "=== pqcekss.sh started ==="
+    log "=== pqccheck.sh started ==="
     log "REPO_DIR=${REPO_DIR}"
 
     # ------------------------------------------------------------------
