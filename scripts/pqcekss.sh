@@ -356,7 +356,12 @@ setup_python_env() {
     PYTHON="${VENV_DIR}/bin/python3"
     PIP="${VENV_DIR}/bin/pip"
     print_ok "Python : $PYTHON ($(${PYTHON} --version 2>&1))"
-    print_ok "pip    : $PIP ($($PIP --version 2>&1 | head -1))"
+
+    # Upgrade pip inside the venv — safe, isolated, fixes wheel-finding on old pip versions
+    print_info "Upgrading pip inside virtual environment..."
+    ${PYTHON} -m pip install --upgrade pip --quiet >>"$LOG_FILE" 2>&1 \
+        && print_ok "pip upgraded: $($PIP --version 2>&1 | head -1)" \
+        || print_warn "pip upgrade failed — continuing with current version"
     log "PYTHON=$PYTHON  PIP=$PIP  VENV=$VENV_DIR"
 }
 
@@ -385,9 +390,30 @@ check_python_packages() {
         fi
     fi
 
-    print_info "Installing packages into virtual environment…"
-    local fail_count=0
+    # On Python 3.6, modern cryptography requires Rust (unavailable) and psutil wheels
+    # may not exist. Pin last-known-good versions for Python <= 3.6.
+    local py_minor
+    py_minor="$(${PYTHON} -c 'import sys; print(sys.version_info.minor)' 2>/dev/null || echo 99)"
+    local py_major
+    py_major="$(${PYTHON} -c 'import sys; print(sys.version_info.major)' 2>/dev/null || echo 3)"
+
+    # Build an install list, substituting pinned versions for Python 3.6
+    local install_list=()
     for pkg in "${REQUIRED_PACKAGES[@]}"; do
+        if [[ "$py_major" -eq 3 && "$py_minor" -le 6 ]]; then
+            case "$pkg" in
+                cryptography) install_list+=("cryptography==3.3.2") ;;
+                psutil)        install_list+=("psutil==5.8.0")        ;;
+                *)             install_list+=("$pkg")                 ;;
+            esac
+        else
+            install_list+=("$pkg")
+        fi
+    done
+
+    print_info "Installing packages into virtual environment..."
+    local fail_count=0
+    for pkg in "${install_list[@]}"; do
         if ${PIP} install "$pkg" --quiet >>"$LOG_FILE" 2>&1; then
             print_ok "  ${pkg}"
             log "Installed $pkg"
