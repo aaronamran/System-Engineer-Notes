@@ -969,9 +969,87 @@ main() {
                 fi
                 ;;
             4)
-                if run_python_script "4Kernel_mod.py" "Kernel modules" "kernel_modules.csv"; then
+                local S4_SRC="${REPO_DIR}/4Kernel_mod.py"
+                local S4_TMP
+                S4_TMP="$(mktemp /tmp/cbom_4kern_XXXXXX.py)"
+                # Patch extract_strings to decompress .ko.xz/.ko.gz before running
+                # strings.  On RHEL/Oracle Linux 8, kernel modules are XZ-compressed;
+                # running strings on a raw .ko.xz file finds nothing readable inside.
+                "${PYTHON}" - "$S4_SRC" "$S4_TMP" <<'PATCHER'
+import sys, re
+src_path, dst_path = sys.argv[1], sys.argv[2]
+with open(src_path) as fh:
+    src = fh.read()
+NEW_FUNC = (
+    'def extract_strings(path):\n'
+    '    import tempfile as _tf, os as _os, lzma as _lz, gzip as _gz\n'
+    '    try:\n'
+    '        p = path.lower()\n'
+    '        if p.endswith(".ko.xz"):\n'
+    '            with _lz.open(path, "rb") as _f:\n'
+    '                _d = _f.read()\n'
+    '        elif p.endswith(".ko.gz"):\n'
+    '            with _gz.open(path, "rb") as _f:\n'
+    '                _d = _f.read()\n'
+    '        else:\n'
+    '            return subprocess.check_output(\n'
+    '                ["strings", path], text=True,\n'
+    '                errors="ignore", stderr=subprocess.DEVNULL)\n'
+    '        _fd, _t = _tf.mkstemp(suffix=".ko")\n'
+    '        try:\n'
+    '            _os.write(_fd, _d)\n'
+    '        finally:\n'
+    '            _os.close(_fd)\n'
+    '        try:\n'
+    '            _r = subprocess.check_output(\n'
+    '                ["strings", _t], text=True,\n'
+    '                errors="ignore", stderr=subprocess.DEVNULL)\n'
+    '        finally:\n'
+    '            _os.unlink(_t)\n'
+    '        return _r\n'
+    '    except Exception:\n'
+    '        return ""\n'
+)
+patched = re.sub(
+    r'def extract_strings\(path\):.*?(?=\ndef |\Z)',
+    NEW_FUNC, src, count=1, flags=re.DOTALL
+)
+with open(dst_path, 'w') as fh:
+    fh.write(patched)
+PATCHER
+                chmod 600 "$S4_TMP"
+                log "Patched 4Kernel_mod.py -> $S4_TMP (compressed .ko.xz/.ko.gz support)"
+                separator
+                print_info "Starting : Kernel modules"
+                print_info "Script   : 4Kernel_mod.py (patched for compressed modules)"
+                print_info "Output   : kernel_modules.csv"
+                echo ""
+                log "START 4Kernel_mod.py"
+                cd "${SCAN_DIR}"
+                local s4rc=0
+                if [[ -n "$SUDO_CMD" ]]; then
+                    sudo "${PYTHON}" "$S4_TMP" 2>&1 | tee -a "$LOG_FILE"
+                    s4rc="${PIPESTATUS[0]}"
+                else
+                    "${PYTHON}" "$S4_TMP" 2>&1 | tee -a "$LOG_FILE"
+                    s4rc="${PIPESTATUS[0]}"
+                fi
+                rm -f "$S4_TMP"
+                if [[ "$s4rc" -eq 0 ]]; then
+                    echo ""
+                    if [[ -f "${SCAN_DIR}/kernel_modules.csv" ]]; then
+                        local s4lines
+                        s4lines="$(wc -l < "${SCAN_DIR}/kernel_modules.csv" 2>/dev/null || echo '?')"
+                        print_ok "Kernel modules - done  (kernel_modules.csv: ${s4lines} lines)"
+                        log "SUCCESS 4Kernel_mod.py -> kernel_modules.csv ($s4lines lines)"
+                    else
+                        print_ok "Kernel modules - done (no crypto matches found in modules)"
+                        log "SUCCESS 4Kernel_mod.py (no crypto matches)"
+                    fi
                     PASS=$(( PASS + 1 ))
                 else
+                    print_error "Kernel modules - FAILED (see log)"
+                    log "FAILED 4Kernel_mod.py (rc=$s4rc)"
                     FAIL=$(( FAIL + 1 ))
                 fi
                 ;;
@@ -1032,16 +1110,28 @@ main() {
                     echo ""
                     log "START 9NetworkProtocol.py"
                     cd "${REPO_DIR}"
+
+                    # Python 3.6 does not support capture_output=True (added in 3.7).
+                    # Patch a temporary copy so the original repo file is never modified.
+                    local S9_SRC="${REPO_DIR}/9NetworkProtocol.py"
+                    local S9_TMP
+                    S9_TMP="$(mktemp /tmp/cbom_9net_XXXXXX.py)"
+                    sed 's/capture_output=True/stdout=subprocess.PIPE, stderr=subprocess.PIPE/g' \
+                        "$S9_SRC" > "$S9_TMP"
+                    chmod 600 "$S9_TMP"
+                    log "Patched 9NetworkProtocol.py -> $S9_TMP (capture_output compat fix)"
+
                     local s9rc=0
                     if [[ -n "$SUDO_CMD" ]]; then
-                        sudo "${PYTHON}" "${REPO_DIR}/9NetworkProtocol.py" \
+                        sudo "${PYTHON}" "$S9_TMP" \
                             "--out-dir=${RESULT_DIR}" "${TARGET_FILE}" 2>&1 | tee -a "$LOG_FILE"
                         s9rc="${PIPESTATUS[0]}"
                     else
-                        "${PYTHON}" "${REPO_DIR}/9NetworkProtocol.py" \
+                        "${PYTHON}" "$S9_TMP" \
                             "--out-dir=${RESULT_DIR}" "${TARGET_FILE}" 2>&1 | tee -a "$LOG_FILE"
                         s9rc="${PIPESTATUS[0]}"
                     fi
+                    rm -f "$S9_TMP"
                     if [[ "$s9rc" -eq 0 ]]; then
                         print_ok "Network Protocol Scan - done"
                         log "SUCCESS 9NetworkProtocol.py"
