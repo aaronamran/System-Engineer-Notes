@@ -1014,6 +1014,9 @@ patched = re.sub(
     r'def extract_strings\(path\):.*?(?=\ndef |\Z)',
     NEW_FUNC, src, count=1, flags=re.DOTALL
 )
+# Python 3.6 does not support text=True in subprocess calls (added in 3.7).
+# universal_newlines=True is the exact equivalent supported in 3.6.
+patched = patched.replace('text=True', 'universal_newlines=True')
 with open(dst_path, 'w') as fh:
     fh.write(patched)
 PATCHER
