@@ -285,6 +285,10 @@ check_for_updates() {
 setup_python_env() {
     print_header "Python environment setup"
 
+    # Paths for the portable Python cache (used only when system Python lacks SSL)
+    local LOCAL_PYTHON_DIR="${REPO_DIR}/.local-python"
+    local PORTABLE_PYTHON="${LOCAL_PYTHON_DIR}/python/bin/python3"
+
     # --- Find system python3 ---
     local SYS_PYTHON=""
     if has_cmd python3; then
@@ -322,28 +326,123 @@ setup_python_env() {
     fi
     print_ok "System Python: $SYS_PYTHON ($(${SYS_PYTHON} --version 2>&1))"
 
+    # --- Determine which Python binary to use for the venv ---
+    # If the system Python was compiled without OpenSSL support, pip cannot reach
+    # PyPI over HTTPS no matter how isolated the venv is (the binary is the problem).
+    # In that case we download a portable, SSL-enabled Python binary from
+    # python-build-standalone into .local-python/ inside the repo dir.
+    # curl/wget use *system* libssl directly and do not rely on Python's ssl module,
+    # so the download always works even in broken-SSL environments.
+    # The production Python is never touched.
+    local VENV_PYTHON="$SYS_PYTHON"
+    if ! ${SYS_PYTHON} -c "import ssl" &>/dev/null 2>&1; then
+        print_warn "System Python lacks SSL support — pip cannot reach PyPI over HTTPS."
+        print_info "Bootstrapping portable Python (SSL built-in) isolated inside repo dir..."
+        log "System Python lacks ssl module — attempting portable Python bootstrap"
+
+        if [[ -x "$PORTABLE_PYTHON" ]]; then
+            print_ok "Portable Python already cached: $($PORTABLE_PYTHON --version 2>&1)"
+            log "Reusing cached portable Python: $PORTABLE_PYTHON"
+        else
+            # curl/wget use the system's libssl, not Python's — safe to use here
+            local DOWNLOADER=""
+            has_cmd curl && DOWNLOADER="curl"
+            [[ -z "$DOWNLOADER" ]] && has_cmd wget && DOWNLOADER="wget"
+            if [[ -z "$DOWNLOADER" ]]; then
+                print_error "Neither curl nor wget is available — cannot download portable Python."
+                print_error "Install curl or wget, then re-run."
+                exit 1
+            fi
+
+            # Detect architecture for the correct pre-built tarball
+            local ARCH; ARCH="$(uname -m)"
+            local PY_VERSION="3.11.9"
+            local PY_RELEASE="20240814"
+            local PY_ARCH=""
+            case "$ARCH" in
+                x86_64)  PY_ARCH="x86_64"  ;;
+                aarch64) PY_ARCH="aarch64" ;;
+                *)
+                    print_error "Unsupported architecture for portable Python bootstrap: $ARCH"
+                    print_error "Manually install a Python with SSL support and re-run."
+                    exit 1
+                    ;;
+            esac
+
+            local TARBALL="cpython-${PY_VERSION}+${PY_RELEASE}-${PY_ARCH}-unknown-linux-gnu-install_only.tar.gz"
+            local URL="https://github.com/indygreg/python-build-standalone/releases/download/${PY_RELEASE}/${TARBALL}"
+            local TARBALL_PATH="${REPO_DIR}/${TARBALL}"
+
+            print_info "Downloading portable Python ${PY_VERSION} (${PY_ARCH})..."
+            print_info "  → ${URL}"
+
+            mkdir -p "$LOCAL_PYTHON_DIR"
+            local dl_rc=0
+            if [[ "$DOWNLOADER" == "curl" ]]; then
+                curl -fL --progress-bar -o "$TARBALL_PATH" "$URL" 2>&1 || dl_rc=$?
+            else
+                wget -q --show-progress -O "$TARBALL_PATH" "$URL" 2>&1 || dl_rc=$?
+            fi
+
+            if [[ "$dl_rc" -ne 0 ]] || [[ ! -s "$TARBALL_PATH" ]]; then
+                rm -f "$TARBALL_PATH"
+                print_error "Download failed. Check internet connectivity and re-run."
+                exit 1
+            fi
+
+            print_info "Extracting portable Python into ${LOCAL_PYTHON_DIR}..."
+            if ! tar -xzf "$TARBALL_PATH" -C "$LOCAL_PYTHON_DIR" >>"$LOG_FILE" 2>&1; then
+                rm -f "$TARBALL_PATH"
+                print_error "Extraction failed. Check disk space and re-run."
+                exit 1
+            fi
+            rm -f "$TARBALL_PATH"
+
+            if [[ ! -x "$PORTABLE_PYTHON" ]]; then
+                print_error "Portable Python binary not found after extraction: $PORTABLE_PYTHON"
+                exit 1
+            fi
+            print_ok "Portable Python ready: $($PORTABLE_PYTHON --version 2>&1)"
+            log "Portable Python extracted: $PORTABLE_PYTHON"
+        fi
+
+        VENV_PYTHON="$PORTABLE_PYTHON"
+    fi
+
     # --- Create virtual environment ---
     # Using a venv avoids the "externally-managed-environment" pip error on
     # Debian/Ubuntu/Kali systems and keeps all packages isolated to this repo.
     VENV_DIR="${REPO_DIR}/.venv"
 
+    # If an existing venv was created from the broken system Python it will also
+    # lack SSL.  Detect this and remove it so it is rebuilt from the correct binary.
+    if [[ -d "$VENV_DIR" ]] && [[ -x "${VENV_DIR}/bin/python3" ]]; then
+        if ! "${VENV_DIR}/bin/python3" -c "import ssl" &>/dev/null 2>&1; then
+            print_warn "Existing venv has no SSL support — removing and recreating..."
+            rm -rf "$VENV_DIR"
+            log "Removed SSL-broken venv: $VENV_DIR"
+        fi
+    fi
+
     if [[ ! -d "$VENV_DIR" ]]; then
         print_info "Creating virtual environment at ${VENV_DIR}…"
-        if ! ${SYS_PYTHON} -m venv "$VENV_DIR" 2>>"$LOG_FILE"; then
-            # python3-venv may be a separate package on Debian/Ubuntu
-            print_warn "venv creation failed — python3-venv may not be installed."
-            print_prompt "  Install python3-venv via the system package manager? [Y/n]: "
-            local venv_choice
-            read -r venv_choice
-            case "$venv_choice" in
-                [nN]*) print_error "Cannot create virtual environment. Exiting."; exit 1 ;;
-            esac
-            if has_cmd apt-get; then
-                ${SUDO_CMD} apt-get install -y python3-venv >>"$LOG_FILE" 2>&1
-            elif has_cmd dnf; then
-                ${SUDO_CMD} dnf install -y python3-venv >>"$LOG_FILE" 2>&1
+        if ! ${VENV_PYTHON} -m venv "$VENV_DIR" 2>>"$LOG_FILE"; then
+            # python3-venv may be a separate package on Debian/Ubuntu (system Python only)
+            if [[ "$VENV_PYTHON" == "$SYS_PYTHON" ]]; then
+                print_warn "venv creation failed — python3-venv may not be installed."
+                print_prompt "  Install python3-venv via the system package manager? [Y/n]: "
+                local venv_choice
+                read -r venv_choice
+                case "$venv_choice" in
+                    [nN]*) print_error "Cannot create virtual environment. Exiting."; exit 1 ;;
+                esac
+                if has_cmd apt-get; then
+                    ${SUDO_CMD} apt-get install -y python3-venv >>"$LOG_FILE" 2>&1
+                elif has_cmd dnf; then
+                    ${SUDO_CMD} dnf install -y python3-venv >>"$LOG_FILE" 2>&1
+                fi
             fi
-            if ! ${SYS_PYTHON} -m venv "$VENV_DIR" 2>>"$LOG_FILE"; then
+            if ! ${VENV_PYTHON} -m venv "$VENV_DIR" 2>>"$LOG_FILE"; then
                 print_error "Could not create virtual environment. Exiting."
                 exit 1
             fi
@@ -495,6 +594,35 @@ check_system_tools() {
         print_warn "No supported package manager (apt/dnf/yum). Please install manually."
         log "No package manager found"
         return
+    fi
+
+    # sslscan is only in the EPEL repository on RHEL/CentOS/Fedora/Oracle Linux.
+    # If sslscan is missing and the package manager is dnf or yum, enable EPEL first.
+    local needs_sslscan=false
+    for t in "${missing[@]}"; do [[ "$t" == "sslscan" ]] && needs_sslscan=true && break; done
+
+    if [[ "$needs_sslscan" == "true" ]] && ! has_cmd apt-get; then
+        # Check if EPEL is already enabled
+        if ! (has_cmd dnf && ${SUDO_CMD} dnf repolist enabled 2>/dev/null | grep -qi "^epel") && \
+           ! (has_cmd yum && ${SUDO_CMD} yum repolist enabled 2>/dev/null | grep -qi "^epel"); then
+            print_info "sslscan requires the EPEL repository — enabling it now..."
+            local epel_ok=false
+            if has_cmd dnf; then
+                ${SUDO_CMD} dnf install -y epel-release >>"$LOG_FILE" 2>&1 && epel_ok=true
+            elif has_cmd yum; then
+                ${SUDO_CMD} yum install -y epel-release >>"$LOG_FILE" 2>&1 && epel_ok=true
+            fi
+            if [[ "$epel_ok" == "true" ]]; then
+                print_ok "EPEL repository enabled."
+                log "EPEL enabled"
+            else
+                print_warn "Could not enable EPEL — sslscan may still fail to install."
+                log "EPEL enable failed"
+            fi
+        else
+            print_ok "EPEL repository already enabled."
+            log "EPEL already enabled"
+        fi
     fi
 
     # Collect unique package names
@@ -948,9 +1076,62 @@ main() {
     for script_id in "${SELECTED_SCRIPTS[@]}"; do
         case "$script_id" in
             1)
-                if run_python_script "1BinariesUsed.py" "Running processes" "binaries_used.csv"; then
+                local S1_SRC="${REPO_DIR}/1BinariesUsed.py"
+                local S1_TMP
+                S1_TMP="$(mktemp /tmp/cbom_1bin_XXXXXX.py)"
+                # classify_libraries() returns None when ldd fails on static binaries
+                # (e.g. statically-linked Go binaries such as containerd-shim-runc-v2).
+                # Patch the call site so that a None result is treated as ([], [])
+                # and the scan continues instead of crashing with a TypeError.
+                "${PYTHON}" - "$S1_SRC" "$S1_TMP" <<'PATCHER'
+import sys, re
+src_path, dst_path = sys.argv[1], sys.argv[2]
+with open(src_path) as fh:
+    src = fh.read()
+patched = re.sub(
+    r'[ \t]*(third_party\s*,\s*system\s*=\s*classify_libraries\(binary\))',
+    lambda m: m.group(0).replace(
+        m.group(1),
+        '_cl=classify_libraries(binary); third_party,system=_cl if _cl is not None else ([],[])'
+    ),
+    src
+)
+with open(dst_path, 'w') as fh:
+    fh.write(patched)
+PATCHER
+                chmod 600 "$S1_TMP"
+                log "Patched 1BinariesUsed.py -> $S1_TMP (static binary ldd None crash fix)"
+                separator
+                print_info "Starting : Running processes"
+                print_info "Script   : 1BinariesUsed.py (patched for static binaries)"
+                print_info "Output   : binaries_used.csv"
+                echo ""
+                log "START 1BinariesUsed.py"
+                cd "${SCAN_DIR}"
+                local s1rc=0
+                if [[ -n "$SUDO_CMD" ]]; then
+                    sudo "${PYTHON}" "$S1_TMP" 2>&1 | tee -a "$LOG_FILE"
+                    s1rc="${PIPESTATUS[0]}"
+                else
+                    "${PYTHON}" "$S1_TMP" 2>&1 | tee -a "$LOG_FILE"
+                    s1rc="${PIPESTATUS[0]}"
+                fi
+                rm -f "$S1_TMP"
+                if [[ "$s1rc" -eq 0 ]]; then
+                    echo ""
+                    if [[ -f "${SCAN_DIR}/binaries_used.csv" ]]; then
+                        local s1lines
+                        s1lines="$(wc -l < "${SCAN_DIR}/binaries_used.csv" 2>/dev/null || echo '?')"
+                        print_ok "Running processes - done  (binaries_used.csv: ${s1lines} lines)"
+                        log "SUCCESS 1BinariesUsed.py -> binaries_used.csv ($s1lines lines)"
+                    else
+                        print_ok "Running processes - done"
+                        log "SUCCESS 1BinariesUsed.py"
+                    fi
                     PASS=$(( PASS + 1 ))
                 else
+                    print_error "Running processes - FAILED (see log)"
+                    log "FAILED 1BinariesUsed.py (rc=$s1rc)"
                     FAIL=$(( FAIL + 1 ))
                 fi
                 ;;
