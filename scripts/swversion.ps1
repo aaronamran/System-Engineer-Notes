@@ -38,7 +38,7 @@ try {
         'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
         'HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
     )
-    $regPaths | ForEach-Object {
+    $software = $regPaths | ForEach-Object {
         Get-ItemProperty $_ -ErrorAction SilentlyContinue
     } | Where-Object { $_.DisplayName -ne $null } |
         Select-Object DisplayName, DisplayVersion, Publisher,
@@ -48,8 +48,9 @@ try {
                     catch { $_.InstallDate }
                 }
             }} |
-        Sort-Object DisplayName |
-        Format-Table -AutoSize
+        Sort-Object DisplayName
+    Write-Host "Total installed: $($software.Count)"
+    $software | Format-Table -AutoSize
 } catch {
     Write-Host "Installed software query failed: $_"
 }
